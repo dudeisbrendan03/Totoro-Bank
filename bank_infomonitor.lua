@@ -1,5 +1,4 @@
--- [Totoro Bank] information display (1.7.61)
--- computercraft.ru (c) Totoro
+-- bnk info
 local internet = require('internet')
 local computer = require('computer')
 local fs = require("filesystem")
@@ -11,16 +10,16 @@ local gpu = com.gpu
 local inet = com.internet
 
 
--- константы
+-- Settings
 local VERSION = "1.7.61"
 local PORT = 27
 local PRICESPAGE = "PT9svXJz"
 local PRICESFILE = "prices.dat"
-local PRICESUPDATE = 7200         -- 2 часа (60*60*2)
+local PRICESUPDATE = 3600         -- 1 hour (60*60)
 local INFOLINES = 6
 local INFOUPDATE = 10
-local REALTIME = true             -- использовать ли в логах реальное время
-local TIMEZONE = 1                -- часовой пояс по Гринвичу
+local REALTIME = true             -- use real time in logs
+local TIMEZONE = 1                -- time zone from GMT+0
 
 local MAXWIDTH, MAXHEIGHT = gpu.maxResolution()
 
@@ -76,11 +75,11 @@ end
 local screen = {}
 local prices = {}
 
--- поиск доступных дисплеев
+-- prep displays (func)
 function callForScreens()
   screen = {}
   for address, name in com.list("screen") do
-      -- записываем данные дисплея в список
+      -- sys prep (display)
       gpu.bind(address)
       local proxy = com.proxy(address)
       local sw, sh = proxy.getAspectRatio()
@@ -95,11 +94,11 @@ function callForScreens()
       data.pagestotal = math.ceil(#prices / (data.height-3))
       table.insert(screen, data)
 
-      -- инициализируем
+      -- Display init
       gpu.setResolution(w, h)
       gpu.setForeground( 0x00ff00)
       term.clear()
-      gpu.set(data.width/2-11.5, data.height/2, "<Инициализация дисплея>")
+      gpu.set(data.width/2-11.5, data.height/2, "<Display initialization>")
     end
   end
 
@@ -396,13 +395,13 @@ end
 
 
 -- инициализация
--- создаем папку для логов
+-- create logs folder if it doesn't exist
 if not fs.exists("logs") then
   fs.makeDirectory("logs")
 end
--- читаем цены с Pastebin и распечатываем их на инфо-дисплеи
+-- update price table
 updatePricesTable()
--- опрашиваем дисплеи
+-- update displays with new info
 callForScreens()
 updateInfoScreens()
 
@@ -410,7 +409,7 @@ updateInfoScreens()
 while true do
   local name, add = event.pull(5)
 
-  -- обрабатываем полученные события
+  -- key_down break
   if name == 'key_down' then
     break
   end
@@ -419,15 +418,15 @@ while true do
     updateTime = computer.uptime()
     updatePricesTable()
   end
-  -- обновляем цены в вестибюле, если надо
+  -- if server has been running longer than the update time set in config then update the info screens
   if (computer.uptime() - pricesTime) > INFOUPDATE then 
     pricesTime = computer.uptime()
     updateInfoScreens(true)
   end
 
-  -- чтобы экран не погас
+  -- upadte display
   updateScreen()
 end
 
--- завершение
+-- end connection
 modem.close()
